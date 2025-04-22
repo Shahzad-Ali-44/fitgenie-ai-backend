@@ -33,7 +33,9 @@ class RecommendationInput(BaseModel):
     dietary_restrictions: str
     health_conditions: str
     specific_concerns_or_questions: str
-
+@app.get("/")
+def read_root():
+    return {"message": "FitGenie API is live!"}
 @app.post("/recommendations")
 async def get_recommendations(data: RecommendationInput) -> Dict[str, List[str]]:
     prompt = f"""
