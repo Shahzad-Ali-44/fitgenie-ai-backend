@@ -73,7 +73,11 @@ Return a JSON response in exactly this format with no extra explanation or markd
         json_str = match.group(0)
         parsed = json.loads(json_str)
         if "concern_response" in parsed and isinstance(parsed["concern_response"], str):
-            parsed["concern_response"] = parsed["concern_response"].replace(";", ",")
+              text = parsed["concern_response"]
+              text = re.sub(r"\s*[;—-]\s*", ", ", text)  
+              text = re.sub(r",\s*,", ",", text)         
+              text = re.sub(r"\s+", " ", text)           
+              parsed["concern_response"] = text.strip()
 
         required_keys = {"diet_types", "workouts", "breakfasts", "dinners", "additional_tips","concern_response"}
 
