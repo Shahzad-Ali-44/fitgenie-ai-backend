@@ -58,7 +58,8 @@ Return a JSON response in exactly this format with no extra explanation or markd
   "workouts": ["Workout 1", "Workout 2", "Workout 3", "Workout 4", "Workout 5"],
   "breakfasts": ["Breakfast 1", "Breakfast 2", "Breakfast 3", "Breakfast 4", "Breakfast 5"],
   "dinners": ["Dinner 1", "Dinner 2", "Dinner 3", "Dinner 4", "Dinner 5"],
-  "additional_tips": ["Tip 1", "Tip 2", "Tip 3"]
+  "additional_tips": ["Tip 1", "Tip 2", "Tip 3"],
+  "concern_response": ["Answer directly here based on the user's specific concern or question."]
 }}
 """
 
