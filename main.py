@@ -72,7 +72,11 @@ Return a JSON response in exactly this format with no extra explanation or markd
 
         json_str = match.group(0)
         parsed = json.loads(json_str)
-        required_keys = {"diet_types", "workouts", "breakfasts", "dinners", "additional_tips"}
+        if "concern_response" in parsed and isinstance(parsed["concern_response"], str):
+            parsed["concern_response"] = parsed["concern_response"].replace(";", ",")
+
+        required_keys = {"diet_types", "workouts", "breakfasts", "dinners", "additional_tips","concern_response"}
+
         if not required_keys.issubset(parsed.keys()):
             raise HTTPException(status_code=500, detail="Missing expected keys in AI response.")
 
