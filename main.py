@@ -46,7 +46,6 @@ class RecommendationInput(BaseModel):
     health_conditions: str = ""
     medications: str = ""
     allergies: str = ""
-    specific_concerns_or_questions: str = ""
 @app.get("/")
 def read_root():
     return {"message": "FitGenie API is live!"}
@@ -56,17 +55,23 @@ async def get_recommendations(data: RecommendationInput):
     bmi_info = ""
     if data.height and data.weight:
         try:
-            height_str = data.height.lower().replace("'", "ft").replace('"', "in").strip()
+            height_str = data.height.strip()
             height_cm = 0
             
-            if "ft" in height_str and "in" in height_str:
-                parts = height_str.split("ft")
-                if len(parts) == 2:
+            if "'" in height_str:
+                parts = height_str.split("'")
+                if len(parts) >= 2:
                     feet = float(parts[0].strip())
-                    inches_str = parts[1].replace("in", "").strip()
-                    inches = float(inches_str) if inches_str else 0
+                    inches_str = parts[1].replace('"', "").strip()
+                    if inches_str and inches_str.replace('.', '', 1).isdigit():
+                        inches = float(inches_str)
+                    else:
+                        inches = 0
                     height_cm = (feet * 12 + inches) * 2.54
-            elif "cm" in height_str:
+                elif len(parts) == 1:
+                    feet = float(parts[0].strip())
+                    height_cm = feet * 30.48
+            elif "cm" in height_str.lower():
                 height_cm = float(height_str.replace("cm", "").strip())
             else:
                 height_num = float(height_str)
@@ -75,12 +80,12 @@ async def get_recommendations(data: RecommendationInput):
                 else:
                     height_cm = height_num * 30.48
             
-            weight_str = data.weight.lower().strip()
+            weight_str = data.weight.strip()
             weight_kg = 0
             
-            if "lbs" in weight_str or "lb" in weight_str:
+            if "lbs" in weight_str.lower() or "lb" in weight_str.lower():
                 weight_kg = float(weight_str.replace("lbs", "").replace("lb", "").strip()) * 0.453592
-            elif "kg" in weight_str:
+            elif "kg" in weight_str.lower():
                 weight_kg = float(weight_str.replace("kg", "").strip())
             else:
                 weight_num = float(weight_str)
@@ -102,9 +107,9 @@ async def get_recommendations(data: RecommendationInput):
                 
                 bmi_info = f"BMI: {bmi:.1f} ({bmi_category})"
             else:
-                bmi_info = "BMI calculation not available - invalid height or weight values"
+                bmi_info = f"BMI calculation failed - Height: {data.height}, Weight: {data.weight}"
         except Exception as e:
-            bmi_info = f"BMI calculation not available - unable to parse height/weight: {str(e)}"
+            bmi_info = f"BMI calculation error - Height: {data.height}, Weight: {data.weight}, Error: {str(e)}"
 
     prompt = f"""
 You are FitGenie AI, an expert nutritionist and fitness trainer. Create a personalized diet and fitness plan.
@@ -138,9 +143,12 @@ HEALTH CONDITIONS:
 Medical Conditions: {data.health_conditions}
 Medications: {data.medications}
 Allergies: {data.allergies}
-Specific Concerns: {data.specific_concerns_or_questions}
 
 CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. Start with {{ and end with }}.
+
+IMPORTANT: 
+- For bmi_analysis field, use exactly this: {bmi_info}. Do NOT generate your own BMI analysis or calculations.
+- For supplements, lifestyle_tips, and progress_tracking arrays: provide EXACTLY 4 items each, no more, no less.
 
 {{
   "personalized_summary": "Brief summary of recommendations for this {data.gender} aged {data.age} with {data.fitness_goals} goals",
@@ -165,10 +173,9 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. S
     "dinner": ["Baked salmon with sweet potato", "Lean beef with brown rice", "Vegetable stir-fry with tofu"],
     "snacks": ["Apple with almond butter", "Greek yogurt with honey", "Mixed nuts and dried fruits"]
   }},
-  "supplements": ["Multivitamin for overall health", "Protein powder for muscle recovery", "Omega-3 for heart health"],
-  "lifestyle_tips": ["Get 7-8 hours of sleep", "Stay hydrated throughout the day", "Take regular breaks from sitting"],
-  "progress_tracking": ["Weigh yourself weekly", "Take progress photos monthly", "Track your workouts"],
-  "concern_response": "Address the user's specific concern: {data.specific_concerns_or_questions}. Provide a detailed, helpful response with numbered points if applicable, using ** for bolding important terms."
+  "supplements": ["**Whey Protein:** To aid muscle recovery and meet protein targets", "**Multivitamin:** To ensure you're getting essential vitamins and minerals", "**Omega-3 Fatty Acids:** Supports heart and brain function", "**Vitamin D:** Supports bone health and immune function"],
+  "lifestyle_tips": ["**Prioritize Sleep:** Get 7-8 hours of quality sleep per night", "**Stay Hydrated:** Drink 8-10 glasses of water throughout the day", "**Take Breaks:** Stand up and stretch every 30-60 minutes", "**Manage Stress:** Practice mindfulness or short meditation sessions"],
+  "progress_tracking": ["**Weekly Weigh-ins:** Weigh yourself at the same time each week", "**Body Measurements:** Take key measurements monthly", "**Fitness Journal:** Track workouts and progress", "**Progress Photos:** Take photos every 4 weeks"]
 }}
 """
 
@@ -183,16 +190,9 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. S
         json_str = match.group(0)
         parsed = json.loads(json_str)
         
-        if "concern_response" in parsed and isinstance(parsed["concern_response"], str):
-            text = parsed["concern_response"]
-            text = re.sub(r"\s*[;—-]\s*", ", ", text)  
-            text = re.sub(r",\s*,", ",", text)        
-            text = re.sub(r"\s+", " ", text)           
-            parsed["concern_response"] = text.strip()
-
         required_keys = {
             "personalized_summary", "bmi_analysis", "diet_plan", "workout_plan", 
-            "meal_suggestions", "supplements", "lifestyle_tips", "progress_tracking", "concern_response"
+            "meal_suggestions", "supplements", "lifestyle_tips", "progress_tracking"
         }
 
         for key in required_keys:
@@ -200,7 +200,7 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. S
                 if key == "personalized_summary":
                     parsed[key] = f"Personalized recommendations for {data.gender} aged {data.age} with {data.fitness_goals} goals"
                 elif key == "bmi_analysis":
-                    parsed[key] = bmi_info
+                    parsed[key] = bmi_info if bmi_info else "BMI calculation not available"
                 elif key == "diet_plan":
                     parsed[key] = {
                         "diet_types": ["Balanced Diet", "High Protein"],
@@ -225,13 +225,14 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. S
                         "snacks": ["Apple with almond butter", "Greek yogurt", "Mixed nuts"]
                     }
                 elif key == "supplements":
-                    parsed[key] = ["Multivitamin", "Protein powder", "Omega-3"]
+                    parsed[key] = ["**Whey Protein:** For muscle recovery", "**Multivitamin:** For essential vitamins", "**Omega-3:** For heart health", "**Vitamin D:** For bone health"]
                 elif key == "lifestyle_tips":
-                    parsed[key] = ["Get 7-8 hours of sleep", "Stay hydrated", "Take regular breaks"]
+                    parsed[key] = ["**Prioritize Sleep:** Get 7-8 hours of quality sleep", "**Stay Hydrated:** Drink 8-10 glasses of water", "**Take Breaks:** Stand up every 30-60 minutes", "**Manage Stress:** Practice mindfulness"]
                 elif key == "progress_tracking":
-                    parsed[key] = ["Weigh yourself weekly", "Take progress photos", "Track workouts"]
-                elif key == "concern_response":
-                    parsed[key] = data.specific_concerns_or_questions or "No specific concerns mentioned"
+                    parsed[key] = ["**Weekly Weigh-ins:** Weigh yourself at the same time each week", "**Body Measurements:** Take key measurements monthly", "**Fitness Journal:** Track workouts and progress", "**Progress Photos:** Take photos every 4 weeks"]
+
+        if "bmi_analysis" in parsed:
+            parsed["bmi_analysis"] = bmi_info if bmi_info else "BMI calculation not available"
 
         return parsed
 
