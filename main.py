@@ -37,14 +37,8 @@ class RecommendationInput(BaseModel):
     target_weight: str = ""
     dietary_preferences: str = ""
     dietary_restrictions: str = ""
-    meal_frequency: str = ""
-    cooking_skill: str = ""
     fitness_goals: str = ""
-    timeline: str = ""
-    lifestyle_factors: str = ""
-    sleep_schedule: str = ""
     health_conditions: str = ""
-    medications: str = ""
     allergies: str = ""
 @app.get("/")
 def read_root():
@@ -130,18 +124,12 @@ Target Weight: {data.target_weight}
 DIETARY PREFERENCES:
 Diet Type: {data.dietary_preferences}
 Restrictions: {data.dietary_restrictions}
-Meal Frequency: {data.meal_frequency}
-Cooking Skill: {data.cooking_skill}
 
 GOALS & LIFESTYLE:
 Fitness Goals: {data.fitness_goals}
-Timeline: {data.timeline}
-Lifestyle: {data.lifestyle_factors}
-Sleep Schedule: {data.sleep_schedule}
 
 HEALTH CONDITIONS:
 Medical Conditions: {data.health_conditions}
-Medications: {data.medications}
 Allergies: {data.allergies}
 
 CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. Start with {{ and end with }}.
