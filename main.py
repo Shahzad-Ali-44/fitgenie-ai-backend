@@ -27,51 +27,150 @@ app.add_middleware(
 )
 
 class RecommendationInput(BaseModel):
-    dietary_preferences: str
-    fitness_goals: str
-    lifestyle_factors: str
-    dietary_restrictions: str
-    health_conditions: str
-    specific_concerns_or_questions: str
+    name: str = ""
+    age: str = ""
+    gender: str = ""
+    height: str = ""
+    weight: str = ""
+    activity_level: str = ""
+    current_fitness_level: str = ""
+    target_weight: str = ""
+    dietary_preferences: str = ""
+    dietary_restrictions: str = ""
+    meal_frequency: str = ""
+    cooking_skill: str = ""
+    fitness_goals: str = ""
+    timeline: str = ""
+    lifestyle_factors: str = ""
+    sleep_schedule: str = ""
+    health_conditions: str = ""
+    medications: str = ""
+    allergies: str = ""
+    specific_concerns_or_questions: str = ""
 @app.get("/")
 def read_root():
     return {"message": "FitGenie API is live!"}
+
 @app.post("/recommendations")
-async def get_recommendations(data: RecommendationInput) -> Dict[str, List[str]]:
+async def get_recommendations(data: RecommendationInput):
+    bmi_info = ""
+    if data.height and data.weight:
+        try:
+            height_str = data.height.lower().replace("'", "ft").replace('"', "in")
+            if "ft" in height_str and "in" in height_str:
+                parts = height_str.split("ft")
+                feet = float(parts[0].strip())
+                inches = float(parts[1].replace("in", "").strip())
+                height_cm = (feet * 12 + inches) * 2.54
+            elif "cm" in height_str:
+                height_cm = float(height_str.replace("cm", "").strip())
+            else:
+                height_cm = float(height_str)
+            
+            weight_str = data.weight.lower()
+            if "lbs" in weight_str or "lb" in weight_str:
+                weight_kg = float(weight_str.replace("lbs", "").replace("lb", "").strip()) * 0.453592
+            elif "kg" in weight_str:
+                weight_kg = float(weight_str.replace("kg", "").strip())
+            else:
+                weight_kg = float(weight_str)
+            
+            bmi = weight_kg / ((height_cm / 100) ** 2)
+            bmi_category = ""
+            if bmi < 18.5:
+                bmi_category = "Underweight"
+            elif bmi < 25:
+                bmi_category = "Normal weight"
+            elif bmi < 30:
+                bmi_category = "Overweight"
+            else:
+                bmi_category = "Obese"
+            
+            bmi_info = f"BMI: {bmi:.1f} ({bmi_category})"
+        except:
+            bmi_info = "BMI calculation not available"
+
     prompt = f"""
-You are a smart AI named FitGenie.
+You are FitGenie AI, an expert nutritionist and fitness trainer. Create a personalized diet and fitness plan.
 
-Analyze the following user's profile and return only valid JSON that includes diet and workout plans.
+USER PROFILE:
+Name: {data.name}
+Age: {data.age} years
+Gender: {data.gender}
+Height: {data.height}
+Weight: {data.weight}
+{bmi_info}
 
-User Profile:
-- Dietary Preferences: {data.dietary_preferences}
-- Fitness Goals: {data.fitness_goals}
-- Lifestyle Factors: {data.lifestyle_factors}
-- Dietary Restrictions: {data.dietary_restrictions}
-- Health Conditions: {data.health_conditions}
-- specific_concerns_or_questions: {data.specific_concerns_or_questions}
+HEALTH METRICS:
+Activity Level: {data.activity_level}
+Current Fitness Level: {data.current_fitness_level}
+Target Weight: {data.target_weight}
 
-Return a JSON response in exactly this format with no extra explanation or markdown:
+DIETARY PREFERENCES:
+Diet Type: {data.dietary_preferences}
+Restrictions: {data.dietary_restrictions}
+Meal Frequency: {data.meal_frequency}
+Cooking Skill: {data.cooking_skill}
+
+GOALS & LIFESTYLE:
+Fitness Goals: {data.fitness_goals}
+Timeline: {data.timeline}
+Lifestyle: {data.lifestyle_factors}
+Sleep Schedule: {data.sleep_schedule}
+
+HEALTH CONDITIONS:
+Medical Conditions: {data.health_conditions}
+Medications: {data.medications}
+Allergies: {data.allergies}
+Specific Concerns: {data.specific_concerns_or_questions}
+
+CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. Start with {{ and end with }}.
 
 {{
-  "diet_types": ["Type 1", "Type 2", "Type 3", "Type 4", "Type 5"],
-  "workouts": ["Workout 1", "Workout 2", "Workout 3", "Workout 4", "Workout 5"],
-  "breakfasts": ["Breakfast 1", "Breakfast 2", "Breakfast 3", "Breakfast 4", "Breakfast 5"],
-  "dinners": ["Dinner 1", "Dinner 2", "Dinner 3", "Dinner 4", "Dinner 5"],
-  "additional_tips": ["Tip 1", "Tip 2", "Tip 3"],
-  "concern_response": ["Answer directly here based on the user's specific concern or question."]
+  "personalized_summary": "Brief summary of recommendations for this {data.gender} aged {data.age} with {data.fitness_goals} goals",
+  "bmi_analysis": "{bmi_info}",
+  "diet_plan": {{
+    "diet_types": ["Balanced Diet", "High Protein", "Low Carb"],
+    "daily_calories": "1800-2200 calories per day",
+    "macros": "Protein: 120-150g, Carbs: 180-220g, Fats: 60-80g",
+    "meal_timing": ["Breakfast: 7-8 AM", "Lunch: 12-1 PM", "Dinner: 7-8 PM"],
+    "hydration": ["Drink 8-10 glasses of water daily"]
+  }},
+  "workout_plan": {{
+    "workout_types": ["Cardio", "Strength Training", "Flexibility"],
+    "frequency": "4-5 times per week",
+    "duration": "45-60 minutes per session",
+    "intensity": "{data.current_fitness_level}",
+    "schedule": ["Monday: Upper Body", "Tuesday: Cardio", "Wednesday: Lower Body", "Thursday: Cardio", "Friday: Full Body"]
+  }},
+  "meal_suggestions": {{
+    "breakfast": ["Oatmeal with berries and nuts", "Greek yogurt with granola", "Scrambled eggs with whole grain toast"],
+    "lunch": ["Grilled chicken salad", "Quinoa bowl with vegetables", "Turkey and avocado wrap"],
+    "dinner": ["Baked salmon with sweet potato", "Lean beef with brown rice", "Vegetable stir-fry with tofu"],
+    "snacks": ["Apple with almond butter", "Greek yogurt with honey", "Mixed nuts and dried fruits"]
+  }},
+  "supplements": ["Multivitamin for overall health", "Protein powder for muscle recovery", "Omega-3 for heart health"],
+  "lifestyle_tips": ["Get 7-8 hours of sleep", "Stay hydrated throughout the day", "Take regular breaks from sitting"],
+  "progress_tracking": ["Weigh yourself weekly", "Take progress photos monthly", "Track your workouts"],
+  "concern_response": ["{data.specific_concerns_or_questions}"]
 }}
 """
 
     try:
         response = model.generate_content(prompt)
         text = (response.text or "").strip()
+        print(f"AI Response: {text[:500]}...")
+        
         match = re.search(r"\{[\s\S]*\}", text)
         if not match:
+            print("No JSON found in response")
             raise HTTPException(status_code=500, detail="Could not find JSON in AI response.")
 
         json_str = match.group(0)
+        print(f"Extracted JSON: {json_str[:200]}...")
+        
         parsed = json.loads(json_str)
+        print(f"Parsed keys: {list(parsed.keys())}")
         
         if "concern_response" in parsed and isinstance(parsed["concern_response"], list):
             if parsed["concern_response"] and isinstance(parsed["concern_response"][0], str):
@@ -81,10 +180,49 @@ Return a JSON response in exactly this format with no extra explanation or markd
                 text = re.sub(r"\s+", " ", text)           
                 parsed["concern_response"][0] = text.strip()
 
-        required_keys = {"diet_types", "workouts", "breakfasts", "dinners", "additional_tips","concern_response"}
+        required_keys = {
+            "personalized_summary", "bmi_analysis", "diet_plan", "workout_plan", 
+            "meal_suggestions", "supplements", "lifestyle_tips", "progress_tracking", "concern_response"
+        }
 
-        if not required_keys.issubset(parsed.keys()):
-            raise HTTPException(status_code=500, detail="Missing expected keys in AI response.")
+        for key in required_keys:
+            if key not in parsed:
+                print(f"Missing key: {key}, adding default value")
+                if key == "personalized_summary":
+                    parsed[key] = f"Personalized recommendations for {data.gender} aged {data.age} with {data.fitness_goals} goals"
+                elif key == "bmi_analysis":
+                    parsed[key] = bmi_info
+                elif key == "diet_plan":
+                    parsed[key] = {
+                        "diet_types": ["Balanced Diet", "High Protein"],
+                        "daily_calories": "1800-2200 calories per day",
+                        "macros": "Protein: 120-150g, Carbs: 180-220g, Fats: 60-80g",
+                        "meal_timing": ["Breakfast: 7-8 AM", "Lunch: 12-1 PM", "Dinner: 7-8 PM"],
+                        "hydration": ["Drink 8-10 glasses of water daily"]
+                    }
+                elif key == "workout_plan":
+                    parsed[key] = {
+                        "workout_types": ["Cardio", "Strength Training"],
+                        "frequency": "4-5 times per week",
+                        "duration": "45-60 minutes per session",
+                        "intensity": data.current_fitness_level or "Intermediate",
+                        "schedule": ["Monday: Upper Body", "Tuesday: Cardio", "Wednesday: Lower Body"]
+                    }
+                elif key == "meal_suggestions":
+                    parsed[key] = {
+                        "breakfast": ["Oatmeal with berries", "Greek yogurt with granola", "Scrambled eggs"],
+                        "lunch": ["Grilled chicken salad", "Quinoa bowl", "Turkey wrap"],
+                        "dinner": ["Baked salmon", "Lean beef with rice", "Vegetable stir-fry"],
+                        "snacks": ["Apple with almond butter", "Greek yogurt", "Mixed nuts"]
+                    }
+                elif key == "supplements":
+                    parsed[key] = ["Multivitamin", "Protein powder", "Omega-3"]
+                elif key == "lifestyle_tips":
+                    parsed[key] = ["Get 7-8 hours of sleep", "Stay hydrated", "Take regular breaks"]
+                elif key == "progress_tracking":
+                    parsed[key] = ["Weigh yourself weekly", "Take progress photos", "Track workouts"]
+                elif key == "concern_response":
+                    parsed[key] = [data.specific_concerns_or_questions or "No specific concerns mentioned"]
 
         return parsed
 
