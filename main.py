@@ -56,39 +56,55 @@ async def get_recommendations(data: RecommendationInput):
     bmi_info = ""
     if data.height and data.weight:
         try:
-            height_str = data.height.lower().replace("'", "ft").replace('"', "in")
+            height_str = data.height.lower().replace("'", "ft").replace('"', "in").strip()
+            height_cm = 0
+            
             if "ft" in height_str and "in" in height_str:
                 parts = height_str.split("ft")
-                feet = float(parts[0].strip())
-                inches = float(parts[1].replace("in", "").strip())
-                height_cm = (feet * 12 + inches) * 2.54
+                if len(parts) == 2:
+                    feet = float(parts[0].strip())
+                    inches_str = parts[1].replace("in", "").strip()
+                    inches = float(inches_str) if inches_str else 0
+                    height_cm = (feet * 12 + inches) * 2.54
             elif "cm" in height_str:
                 height_cm = float(height_str.replace("cm", "").strip())
             else:
-                height_cm = float(height_str)
+                height_num = float(height_str)
+                if height_num > 10:
+                    height_cm = height_num
+                else:
+                    height_cm = height_num * 30.48
             
-            weight_str = data.weight.lower()
+            weight_str = data.weight.lower().strip()
+            weight_kg = 0
+            
             if "lbs" in weight_str or "lb" in weight_str:
                 weight_kg = float(weight_str.replace("lbs", "").replace("lb", "").strip()) * 0.453592
             elif "kg" in weight_str:
                 weight_kg = float(weight_str.replace("kg", "").strip())
             else:
-                weight_kg = float(weight_str)
-            
-            bmi = weight_kg / ((height_cm / 100) ** 2)
-            bmi_category = ""
-            if bmi < 18.5:
-                bmi_category = "Underweight"
-            elif bmi < 25:
-                bmi_category = "Normal weight"
-            elif bmi < 30:
-                bmi_category = "Overweight"
+                weight_num = float(weight_str)
+                if weight_num > 50:
+                    weight_kg = weight_num
+                else:
+                    weight_kg = weight_num * 0.453592
+            if height_cm > 0 and weight_kg > 0:
+                bmi = weight_kg / ((height_cm / 100) ** 2)
+                bmi_category = ""
+                if bmi < 18.5:
+                    bmi_category = "Underweight"
+                elif bmi < 25:
+                    bmi_category = "Normal weight"
+                elif bmi < 30:
+                    bmi_category = "Overweight"
+                else:
+                    bmi_category = "Obese"
+                
+                bmi_info = f"BMI: {bmi:.1f} ({bmi_category})"
             else:
-                bmi_category = "Obese"
-            
-            bmi_info = f"BMI: {bmi:.1f} ({bmi_category})"
-        except:
-            bmi_info = "BMI calculation not available"
+                bmi_info = "BMI calculation not available - invalid height or weight values"
+        except Exception as e:
+            bmi_info = f"BMI calculation not available - unable to parse height/weight: {str(e)}"
 
     prompt = f"""
 You are FitGenie AI, an expert nutritionist and fitness trainer. Create a personalized diet and fitness plan.
