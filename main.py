@@ -152,33 +152,27 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. S
   "supplements": ["Multivitamin for overall health", "Protein powder for muscle recovery", "Omega-3 for heart health"],
   "lifestyle_tips": ["Get 7-8 hours of sleep", "Stay hydrated throughout the day", "Take regular breaks from sitting"],
   "progress_tracking": ["Weigh yourself weekly", "Take progress photos monthly", "Track your workouts"],
-  "concern_response": ["{data.specific_concerns_or_questions}"]
+  "concern_response": "Address the user's specific concern: {data.specific_concerns_or_questions}. Provide a detailed, helpful response with numbered points if applicable, using ** for bolding important terms."
 }}
 """
 
     try:
         response = model.generate_content(prompt)
         text = (response.text or "").strip()
-        print(f"AI Response: {text[:500]}...")
         
         match = re.search(r"\{[\s\S]*\}", text)
         if not match:
-            print("No JSON found in response")
             raise HTTPException(status_code=500, detail="Could not find JSON in AI response.")
 
         json_str = match.group(0)
-        print(f"Extracted JSON: {json_str[:200]}...")
-        
         parsed = json.loads(json_str)
-        print(f"Parsed keys: {list(parsed.keys())}")
         
-        if "concern_response" in parsed and isinstance(parsed["concern_response"], list):
-            if parsed["concern_response"] and isinstance(parsed["concern_response"][0], str):
-                text = parsed["concern_response"][0]
-                text = re.sub(r"\s*[;—-]\s*", ", ", text)  
-                text = re.sub(r",\s*,", ",", text)        
-                text = re.sub(r"\s+", " ", text)           
-                parsed["concern_response"][0] = text.strip()
+        if "concern_response" in parsed and isinstance(parsed["concern_response"], str):
+            text = parsed["concern_response"]
+            text = re.sub(r"\s*[;—-]\s*", ", ", text)  
+            text = re.sub(r",\s*,", ",", text)        
+            text = re.sub(r"\s+", " ", text)           
+            parsed["concern_response"] = text.strip()
 
         required_keys = {
             "personalized_summary", "bmi_analysis", "diet_plan", "workout_plan", 
@@ -187,7 +181,6 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. S
 
         for key in required_keys:
             if key not in parsed:
-                print(f"Missing key: {key}, adding default value")
                 if key == "personalized_summary":
                     parsed[key] = f"Personalized recommendations for {data.gender} aged {data.age} with {data.fitness_goals} goals"
                 elif key == "bmi_analysis":
@@ -222,7 +215,7 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no extra text. S
                 elif key == "progress_tracking":
                     parsed[key] = ["Weigh yourself weekly", "Take progress photos", "Track workouts"]
                 elif key == "concern_response":
-                    parsed[key] = [data.specific_concerns_or_questions or "No specific concerns mentioned"]
+                    parsed[key] = data.specific_concerns_or_questions or "No specific concerns mentioned"
 
         return parsed
 
