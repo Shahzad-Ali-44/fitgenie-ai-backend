@@ -10,11 +10,12 @@ import re
 
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    raise RuntimeError("GOOGLE_API_KEY is missing in your .env file")
 
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel(model_name="models/gemini-2.5-flash-lite")
+
+model = None
+if api_key:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(model_name="models/gemini-2.5-flash-lite")
 
 app = FastAPI()
 
@@ -168,6 +169,9 @@ IMPORTANT:
 """
 
     try:
+        if not model:
+            raise HTTPException(status_code=500, detail="API key not configured. Please set GOOGLE_API_KEY environment variable.")
+        
         response = model.generate_content(prompt)
         text = (response.text or "").strip()
         
