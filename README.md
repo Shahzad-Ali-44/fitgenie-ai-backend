@@ -50,38 +50,6 @@ This is the backend for **FitGenie AI**, an AI-powered fitness and diet recommen
    uvicorn main:app --reload
    ```
 
-   The API will be available at `http://localhost:8000`.
-
-### API Endpoint
-
-#### POST `/recommendations`
-
-This endpoint accepts a JSON payload containing the user's fitness and diet preferences and returns personalized recommendations.
-
-**Request Body** (example):
-
-```json
-{
-  "dietary_preferences": "vegetarian",
-  "fitness_goals": "weight loss",
-  "lifestyle_factors": "sedentary",
-  "dietary_restrictions": "gluten-free",
-  "health_conditions": "hypertension",
-  "specific_concerns_or_questions": "Looking for a low-sodium diet"
-}
-```
-
-**Response** (example):
-
-```json
-{
-  "diet_types": ["Low-carb", "High-protein"],
-  "workouts": ["Walking", "Yoga"],
-  "breakfasts": ["Oats with almond milk", "Smoothie bowl"],
-  "dinners": ["Grilled tofu with veggies", "Quinoa salad"],
-  "additional_tips": ["Drink plenty of water", "Avoid processed foods"]
-}
-```
 
 ## License
 
